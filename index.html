@@ -51,13 +51,29 @@
             align-items: center;
             font-size: 4em;
             font-weight: bold;
-            margin: 0 auto 30px;
+            margin: 0 auto 15px; /* 하단 여백 조정 */
             transition: all 0.5s;
         }
-        /* 시간 구간별 타이머 색상 (0~49초, 50~70초, 71초~) */
-        .timer-circle.default { border: 8px solid #95a5a6; color: #7f8c8d; } /* 회색 (답변 시간 부족) */
-        .timer-circle.good { border: 8px solid #2ecc71; color: #27ae60; }    /* 초록색 (적정 시간 50~70초) */
-        .timer-circle.danger { border: 8px solid #e74c3c; color: #c0392b; }  /* 빨간색 (시간 초과 71초 이상) */
+        /* 시간 구간별 타이머 색상 */
+        .timer-circle.default { border: 8px solid #95a5a6; color: #7f8c8d; } /* 회색 */
+        .timer-circle.good { border: 8px solid #2ecc71; color: #27ae60; }    /* 초록색 */
+        .timer-circle.danger { border: 8px solid #e74c3c; color: #c0392b; }  /* 빨간색 */
+
+        /* 타이머 조작 버튼 (시작/정지) */
+        .timer-controls {
+            margin-bottom: 30px;
+        }
+        .btn-toggle {
+            background-color: #27ae60; /* 시작: 초록색 */
+            padding: 10px 20px;
+            font-size: 1.1em;
+            border-radius: 30px;
+        }
+        .btn-toggle:hover { background-color: #2ecc71; }
+        .btn-toggle.pause {
+            background-color: #e74c3c; /* 정지: 빨간색 */
+        }
+        .btn-toggle.pause:hover { background-color: #c0392b; }
 
         /* 질문 스타일 */
         .question-number {
@@ -73,7 +89,7 @@
             line-height: 1.4;
         }
 
-        /* 버튼 스타일 */
+        /* 기본 버튼 스타일 */
         button {
             background-color: #3498db;
             color: white;
@@ -95,6 +111,7 @@
             font-size: 1.1em;
             font-weight: bold;
             color: #8e44ad;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -123,8 +140,11 @@
     <div id="test-screen" class="hidden">
         <div class="progress-text" id="progress-text">1 / 10 번째 질문</div>
         
-        <!-- 타이머 (0부터 시작) -->
+        <!-- 타이머 및 조작부 -->
         <div class="timer-circle default" id="timer">0</div>
+        <div class="timer-controls">
+            <button id="toggle-btn" class="btn-toggle" onclick="toggleTimer()">타이머 시작</button>
+        </div>
         
         <div class="question-number" id="q-num-display">질문 번호</div>
         <div class="question-text" id="q-text-display">질문 내용이 여기에 표시됩니다.</div>
@@ -141,7 +161,6 @@
 </div>
 
 <script>
-    // 10개의 질문 데이터
     const allQuestions = [
         { id: 1, text: "이 작품의 주제와 관련이 있는 한 문장은 무엇인가요?" },
         { id: 2, text: "소설 속 인물을 한 명 선택해서 그의 세계관을 분석해 볼까요?" },
@@ -158,11 +177,11 @@
     let selectedQuestions = [];
     let currentIndex = 0;
     
-    // 카운트업을 위한 변수 (0초부터 시작)
     let timePassed = 0; 
     let timerInterval;
+    let isTimerRunning = false; // 타이머 동작 상태 확인 변수
 
-    // 평가 시작 (10문제 순서 랜덤 섞기)
+    // 평가 시작
     function startTest() {
         selectedQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
         
@@ -172,9 +191,19 @@
         loadQuestion();
     }
 
-    // 질문 로드 및 타이머 세팅
+    // 질문 로드 및 타이머 초기화 (자동 시작 안 함)
     function loadQuestion() {
-        timePassed = 0; // 문제 넘어갈 때마다 0초로 리셋
+        // 문제 변경 시 타이머 강제 종료 및 초기화
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        timePassed = 0;
+        
+        // 버튼 UI 초기화
+        const toggleBtn = document.getElementById('toggle-btn');
+        toggleBtn.innerText = "타이머 시작";
+        toggleBtn.classList.remove('pause');
+        
+        // 화면 초기화
         const q = selectedQuestions[currentIndex];
         const totalQuestions = selectedQuestions.length;
         
@@ -190,37 +219,48 @@
         }
 
         updateTimerDisplay(); // 0초 화면 출력
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(updateTime, 1000); // 1초마다 시간 증가
     }
 
-    // 매초 타이머 증가 (0, 1, 2, 3...)
+    // 타이머 시작/일시정지 토글 함수
+    function toggleTimer() {
+        const toggleBtn = document.getElementById('toggle-btn');
+        
+        if (isTimerRunning) {
+            // 실행 중이면 일시정지
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            toggleBtn.innerText = "타이머 계속";
+            toggleBtn.classList.remove('pause');
+        } else {
+            // 정지 상태면 시작
+            timerInterval = setInterval(updateTime, 1000);
+            isTimerRunning = true;
+            toggleBtn.innerText = "타이머 일시정지";
+            toggleBtn.classList.add('pause');
+        }
+    }
+
+    // 매초 타이머 증가
     function updateTime() {
         timePassed++;
         updateTimerDisplay();
     }
 
-    // 타이머 시각적 UI 업데이트 (시간 구간에 따른 색상 변경)
+    // 타이머 시각적 UI 업데이트
     function updateTimerDisplay() {
         const timerEl = document.getElementById('timer');
         timerEl.innerText = timePassed;
 
-        // 70초 초과: 빨간색
         if (timePassed > 70) {
             timerEl.className = "timer-circle danger"; 
-        } 
-        // 50초 이상 70초 이하 (평가 기준 충족): 초록색
-        else if (timePassed >= 50) {
+        } else if (timePassed >= 50) {
             timerEl.className = "timer-circle good"; 
-        } 
-        // 0초 이상 49초 이하 (시간 부족): 회색
-        else {
+        } else {
             timerEl.className = "timer-circle default"; 
         }
     }
 
-    // 다음 질문으로 넘어가기 (버튼 클릭 시에만 작동)
+    // 다음 질문으로 넘어가기
     function nextQuestion() {
         clearInterval(timerInterval);
         currentIndex++;
