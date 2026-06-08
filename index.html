@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문학 구술 평가</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
+        }
+        h1 { color: #2c3e50; }
+        
+        /* 시작 화면 안내문 스타일 */
+        .intro-box {
+            background-color: #eef2f5;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        .intro-box h3 { margin-top: 0; color: #2980b9; }
+        .highlight { font-weight: bold; color: #c0392b; }
+
+        /* 타이머 스타일 */
+        .timer-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 8px solid #2ecc71;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 4em;
+            font-weight: bold;
+            margin: 0 auto 30px;
+            color: #27ae60;
+            transition: all 0.5s;
+        }
+        .timer-circle.warning { border-color: #f39c12; color: #d35400; }
+        .timer-circle.danger { border-color: #e74c3c; color: #c0392b; }
+
+        /* 질문 스타일 */
+        .question-number {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .question-text {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 40px;
+            word-break: keep-all;
+            line-height: 1.4;
+        }
+
+        /* 버튼 스타일 */
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        button:hover { background-color: #2980b9; }
+
+        /* 화면 숨김 처리 */
+        .hidden { display: none !important; }
+        
+        .progress-text {
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #8e44ad;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 1. 시작 화면 -->
+    <div id="start-screen">
+        <h1>문학 구술 평가</h1>
+        <div class="intro-box">
+            <h3>[구술평가 방법 및 유의사항]</h3>
+            <ol>
+                <li>학생은 <span class="highlight">자신의 이름과 자신이 뽑은 문제의 번호</span>를 반드시 먼저 말한 후 답변합니다.<br>
+                    <em>예) "김○○입니다. 4번 문제에 대해 답변하겠습니다."</em></li>
+                <li>답변 시간은 <span class="highlight">50초 이상 70초 이하</span>입니다.</li>
+                <li>모든 질문에 답할 때는 <span class="highlight">왜 그렇게 답했는지에 대한 설명</span>이 포함되어야 합니다.</li>
+                <li>구술평가를 할 때에는 책을 포함해 다른 자료를 볼 수 없습니다.</li>
+                <li>평가가 시작되면 교사에게 질문을 할 수 없습니다.</li>
+            </ol>
+            <p>※ 총 10개의 문항이 <strong>무작위 순서</strong>로 모두 출제됩니다.</p>
+        </div>
+        <button onclick="startTest()">평가 시작하기</button>
+    </div>
+
+    <!-- 2. 평가 화면 -->
+    <div id="test-screen" class="hidden">
+        <div class="progress-text" id="progress-text">1 / 10 번째 질문</div>
+        <div class="timer-circle" id="timer">70</div>
+        
+        <div class="question-number" id="q-num-display">질문 번호</div>
+        <div class="question-text" id="q-text-display">질문 내용이 여기에 표시됩니다.</div>
+        
+        <button id="next-btn" onclick="nextQuestion()">다음 문제</button>
+    </div>
+
+    <!-- 3. 종료 화면 -->
+    <div id="end-screen" class="hidden">
+        <h1>구술 평가 종료</h1>
+        <p style="font-size: 1.2em; margin-bottom: 30px;">수고하셨습니다. 모든 평가가 완료되었습니다.</p>
+        <button onclick="location.reload()">처음으로 돌아가기</button>
+    </div>
+</div>
+
+<script>
+    // 10개의 질문 데이터
+    const allQuestions = [
+        { id: 1, text: "이 작품의 주제와 관련이 있는 한 문장은 무엇인가요?" },
+        { id: 2, text: "소설 속 인물을 한 명 선택해서 그의 세계관을 분석해 볼까요?" },
+        { id: 3, text: "소설 속 사건과 비슷한 사건을 영화나 드라마나 뉴스에서 찾으면 무엇이 있나요?" },
+        { id: 4, text: "인물의 결정적인 선택이 무엇인가요? 선택이 달랐다면 사건 전개가 어떻게 달라졌을까요?" },
+        { id: 5, text: "이 소설 안에서 대립하는 가치관은 무엇인가요?" },
+        { id: 6, text: "이 소설 속 사건이나 인물과 연관이 있는 자신이나 주변 사람의 경험은 무엇이 있나요?" },
+        { id: 7, text: "주인공이 소설 속의 다른 인물로 바뀌면, 작품의 분위기와 주제가 어떻게 달라지나요?" },
+        { id: 8, text: "작가가 이 작품을 써서 세상 사람들에게 어떤 생각을 전하려 했을까요?" },
+        { id: 9, text: "이 작품이 사람들에게 어떻게 받아들여지고 세상에 어떤 영향을 미칠까요?" },
+        { id: 10, text: "이 소설의 문체 또는 구성이 작품의 주제와 어떻게 연관이 되나요?" }
+    ];
+
+    let selectedQuestions = [];
+    let currentIndex = 0;
+    let timeLeft = 70;
+    let timerInterval;
+
+    // 평가 시작 (10문제 순서 랜덤 섞기)
+    function startTest() {
+        // 배열을 랜덤하게 섞음 (slice 제거하여 10개 모두 유지)
+        selectedQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
+        
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('test-screen').classList.remove('hidden');
+        
+        loadQuestion();
+    }
+
+    // 질문 로드 및 타이머 세팅
+    function loadQuestion() {
+        timeLeft = 70;
+        const q = selectedQuestions[currentIndex];
+        
+        const totalQuestions = selectedQuestions.length;
+        document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${totalQuestions} 번째 질문`;
+        document.getElementById('q-num-display').innerText = `[ 원본 ${q.id}번 문제 ]`;
+        document.getElementById('q-text-display').innerText = q.text;
+        
+        const nextBtn = document.getElementById('next-btn');
+        // 항상 활성화되어 있고, 마지막 문제일 때만 텍스트 변경
+        if (currentIndex === totalQuestions - 1) {
+            nextBtn.innerText = "평가 종료";
+        } else {
+            nextBtn.innerText = "다음 문제";
+        }
+
+        updateTimerDisplay();
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(updateTime, 1000);
+    }
+
+    // 매초 타이머 업데이트
+    function updateTime() {
+        if (timeLeft > 0) {
+            timeLeft--;
+        }
+        updateTimerDisplay();
+        // 0초가 되어도 강제로 넘기지 않고 0인 상태로 멈춰 있도록 유지합니다.
+    }
+
+    // 타이머 시각적 UI 업데이트 (색상 변경 등)
+    function updateTimerDisplay() {
+        const timerEl = document.getElementById('timer');
+        timerEl.innerText = timeLeft;
+
+        // 색상 경고 효과
+        if (timeLeft === 0) {
+            timerEl.className = "timer-circle danger"; // 빨간색 (0초 도달)
+        } else if (timeLeft <= 20) {
+            timerEl.className = "timer-circle warning"; // 주황색 (20초 이하)
+        } else {
+            timerEl.className = "timer-circle"; // 기본 초록색
+        }
+    }
+
+    // 다음 질문으로 넘어가기 (버튼 클릭 시에만 작동)
+    function nextQuestion() {
+        clearInterval(timerInterval);
+        currentIndex++;
+
+        if (currentIndex < selectedQuestions.length) {
+            loadQuestion();
+        } else {
+            // 모든 문제가 끝남
+            document.getElementById('test-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+        }
+    }
+</script>
+
+</body>
+</html>
