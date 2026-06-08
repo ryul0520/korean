@@ -46,18 +46,18 @@
             width: 150px;
             height: 150px;
             border-radius: 50%;
-            border: 8px solid #2ecc71;
             display: flex;
             justify-content: center;
             align-items: center;
             font-size: 4em;
             font-weight: bold;
             margin: 0 auto 30px;
-            color: #27ae60;
             transition: all 0.5s;
         }
-        .timer-circle.warning { border-color: #f39c12; color: #d35400; }
-        .timer-circle.danger { border-color: #e74c3c; color: #c0392b; }
+        /* 시간 구간별 타이머 색상 (0~49초, 50~70초, 71초~) */
+        .timer-circle.default { border: 8px solid #95a5a6; color: #7f8c8d; } /* 회색 (답변 시간 부족) */
+        .timer-circle.good { border: 8px solid #2ecc71; color: #27ae60; }    /* 초록색 (적정 시간 50~70초) */
+        .timer-circle.danger { border: 8px solid #e74c3c; color: #c0392b; }  /* 빨간색 (시간 초과 71초 이상) */
 
         /* 질문 스타일 */
         .question-number {
@@ -109,7 +109,7 @@
             <ol>
                 <li>학생은 <span class="highlight">자신의 이름과 자신이 뽑은 문제의 번호</span>를 반드시 먼저 말한 후 답변합니다.<br>
                     <em>예) "김○○입니다. 4번 문제에 대해 답변하겠습니다."</em></li>
-                <li>답변 시간은 <span class="highlight">50초 이상 70초 이하</span>입니다.</li>
+                <li>답변 시간은 <span class="highlight">50초 이상 70초 이하</span>입니다. (타이머가 초록색일 때가 적정 시간입니다)</li>
                 <li>모든 질문에 답할 때는 <span class="highlight">왜 그렇게 답했는지에 대한 설명</span>이 포함되어야 합니다.</li>
                 <li>구술평가를 할 때에는 책을 포함해 다른 자료를 볼 수 없습니다.</li>
                 <li>평가가 시작되면 교사에게 질문을 할 수 없습니다.</li>
@@ -122,7 +122,9 @@
     <!-- 2. 평가 화면 -->
     <div id="test-screen" class="hidden">
         <div class="progress-text" id="progress-text">1 / 10 번째 질문</div>
-        <div class="timer-circle" id="timer">70</div>
+        
+        <!-- 타이머 (0부터 시작) -->
+        <div class="timer-circle default" id="timer">0</div>
         
         <div class="question-number" id="q-num-display">질문 번호</div>
         <div class="question-text" id="q-text-display">질문 내용이 여기에 표시됩니다.</div>
@@ -155,12 +157,13 @@
 
     let selectedQuestions = [];
     let currentIndex = 0;
-    let timeLeft = 70;
+    
+    // 카운트업을 위한 변수 (0초부터 시작)
+    let timePassed = 0; 
     let timerInterval;
 
     // 평가 시작 (10문제 순서 랜덤 섞기)
     function startTest() {
-        // 배열을 랜덤하게 섞음 (slice 제거하여 10개 모두 유지)
         selectedQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
         
         document.getElementById('start-screen').classList.add('hidden');
@@ -171,49 +174,49 @@
 
     // 질문 로드 및 타이머 세팅
     function loadQuestion() {
-        timeLeft = 70;
+        timePassed = 0; // 문제 넘어갈 때마다 0초로 리셋
         const q = selectedQuestions[currentIndex];
-        
         const totalQuestions = selectedQuestions.length;
+        
         document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${totalQuestions} 번째 질문`;
         document.getElementById('q-num-display').innerText = `[ 원본 ${q.id}번 문제 ]`;
         document.getElementById('q-text-display').innerText = q.text;
         
         const nextBtn = document.getElementById('next-btn');
-        // 항상 활성화되어 있고, 마지막 문제일 때만 텍스트 변경
         if (currentIndex === totalQuestions - 1) {
             nextBtn.innerText = "평가 종료";
         } else {
             nextBtn.innerText = "다음 문제";
         }
 
-        updateTimerDisplay();
+        updateTimerDisplay(); // 0초 화면 출력
         
         clearInterval(timerInterval);
-        timerInterval = setInterval(updateTime, 1000);
+        timerInterval = setInterval(updateTime, 1000); // 1초마다 시간 증가
     }
 
-    // 매초 타이머 업데이트
+    // 매초 타이머 증가 (0, 1, 2, 3...)
     function updateTime() {
-        if (timeLeft > 0) {
-            timeLeft--;
-        }
+        timePassed++;
         updateTimerDisplay();
-        // 0초가 되어도 강제로 넘기지 않고 0인 상태로 멈춰 있도록 유지합니다.
     }
 
-    // 타이머 시각적 UI 업데이트 (색상 변경 등)
+    // 타이머 시각적 UI 업데이트 (시간 구간에 따른 색상 변경)
     function updateTimerDisplay() {
         const timerEl = document.getElementById('timer');
-        timerEl.innerText = timeLeft;
+        timerEl.innerText = timePassed;
 
-        // 색상 경고 효과
-        if (timeLeft === 0) {
-            timerEl.className = "timer-circle danger"; // 빨간색 (0초 도달)
-        } else if (timeLeft <= 20) {
-            timerEl.className = "timer-circle warning"; // 주황색 (20초 이하)
-        } else {
-            timerEl.className = "timer-circle"; // 기본 초록색
+        // 70초 초과: 빨간색
+        if (timePassed > 70) {
+            timerEl.className = "timer-circle danger"; 
+        } 
+        // 50초 이상 70초 이하 (평가 기준 충족): 초록색
+        else if (timePassed >= 50) {
+            timerEl.className = "timer-circle good"; 
+        } 
+        // 0초 이상 49초 이하 (시간 부족): 회색
+        else {
+            timerEl.className = "timer-circle default"; 
         }
     }
 
